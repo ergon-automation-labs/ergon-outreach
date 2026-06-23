@@ -3,20 +3,8 @@
 /.mix/
 /deps/
 
-# IDE
-.vscode/
-.idea/
-*.swp
+# Erlang
+erl_crash.dump
 
 # OS
 .DS_Store
-
-# Erlang crash
-erl_crash.dump
-
-# Env
-.env
-.env.local
-
-# Cache
-.cache/
