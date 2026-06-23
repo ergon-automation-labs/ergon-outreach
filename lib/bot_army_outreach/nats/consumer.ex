@@ -6,8 +6,8 @@ defmodule BotArmyOutreach.NATS.Consumer do
   Uses standardized Reply format for request/reply patterns.
 
   All request/reply handlers should return responses using Reply helpers:
-  - BotArmyRuntime.NATS.Reply.ok(data) for success
-  - BotArmyRuntime.NATS.Reply.error(message, code) for errors
+  - Reply.ok(data) for success
+  - Reply.error(message, code) for errors
   """
 
   use GenServer
@@ -17,6 +17,8 @@ defmodule BotArmyOutreach.NATS.Consumer do
   @version Mix.Project.config()[:version]
 
   alias BotArmyOutreach.Stores.ContactStore
+  alias BotArmyCore.NATS.Decoder
+  alias Reply
 
   # Register subjects with their metadata for runtime discovery
   @subjects [
@@ -156,14 +158,14 @@ defmodule BotArmyOutreach.NATS.Consumer do
 
           case ContactStore.create_contact(payload) do
             {:ok, contact} ->
-              BotArmyRuntime.NATS.Reply.ok(%{"contact" => contact})
+              Reply.ok(%{"contact" => contact})
 
             {:error, reason} ->
-              BotArmyRuntime.NATS.Reply.error(inspect(reason), :create_failed)
+              Reply.error(inspect(reason), :create_failed)
           end
 
         {:error, reason} ->
-          BotArmyRuntime.NATS.Reply.error(inspect(reason), :decode_failed)
+          Reply.error(inspect(reason), :decode_failed)
       end
 
     if state.conn do
@@ -179,20 +181,20 @@ defmodule BotArmyOutreach.NATS.Consumer do
 
           case ContactStore.get_contact(payload["email"]) do
             nil ->
-              BotArmyRuntime.NATS.Reply.error("Contact not found", :not_found)
+              Reply.error("Contact not found", :not_found)
 
             contact ->
               case ContactStore.update_contact(contact, payload) do
                 {:ok, updated} ->
-                  BotArmyRuntime.NATS.Reply.ok(%{"contact" => updated})
+                  Reply.ok(%{"contact" => updated})
 
                 {:error, reason} ->
-                  BotArmyRuntime.NATS.Reply.error(inspect(reason), :update_failed)
+                  Reply.error(inspect(reason), :update_failed)
               end
           end
 
         {:error, reason} ->
-          BotArmyRuntime.NATS.Reply.error(inspect(reason), :decode_failed)
+          Reply.error(inspect(reason), :decode_failed)
       end
 
     if state.conn do
@@ -207,10 +209,10 @@ defmodule BotArmyOutreach.NATS.Consumer do
           payload = decoded["payload"] || decoded
           filters = Map.get(payload, "filters", [])
           contacts = ContactStore.list_contacts(filters)
-          BotArmyRuntime.NATS.Reply.ok(%{"contacts" => contacts})
+          Reply.ok(%{"contacts" => contacts})
 
         {:error, reason} ->
-          BotArmyRuntime.NATS.Reply.error(inspect(reason), :decode_failed)
+          Reply.error(inspect(reason), :decode_failed)
       end
 
     if state.conn do
@@ -226,7 +228,7 @@ defmodule BotArmyOutreach.NATS.Consumer do
 
           case ContactStore.get_contact(payload["email"]) do
             nil ->
-              BotArmyRuntime.NATS.Reply.error("Contact not found", :not_found)
+              Reply.error("Contact not found", :not_found)
 
             contact ->
               follow_up_date =
@@ -241,18 +243,18 @@ defmodule BotArmyOutreach.NATS.Consumer do
                      stage: "follow_up_scheduled"
                    }) do
                 {:ok, updated} ->
-                  BotArmyRuntime.NATS.Reply.ok(%{
+                  Reply.ok(%{
                     "scheduled" => true,
                     "contact" => updated
                   })
 
                 {:error, reason} ->
-                  BotArmyRuntime.NATS.Reply.error(inspect(reason), :schedule_failed)
+                  Reply.error(inspect(reason), :schedule_failed)
               end
           end
 
         {:error, reason} ->
-          BotArmyRuntime.NATS.Reply.error(inspect(reason), :decode_failed)
+          Reply.error(inspect(reason), :decode_failed)
       end
 
     if state.conn do
@@ -270,14 +272,14 @@ defmodule BotArmyOutreach.NATS.Consumer do
 
           case BotArmyOutreach.Integrations.GoogleSheets.sync_from_sheet(sheet_id, range) do
             {:ok, result} ->
-              BotArmyRuntime.NATS.Reply.ok(result)
+              Reply.ok(result)
 
             {:error, reason} ->
-              BotArmyRuntime.NATS.Reply.error(inspect(reason), :sync_failed)
+              Reply.error(inspect(reason), :sync_failed)
           end
 
         {:error, reason} ->
-          BotArmyRuntime.NATS.Reply.error(inspect(reason), :decode_failed)
+          Reply.error(inspect(reason), :decode_failed)
       end
 
     if state.conn do
