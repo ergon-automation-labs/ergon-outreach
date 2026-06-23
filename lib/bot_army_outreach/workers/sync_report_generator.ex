@@ -1,4 +1,5 @@
 defmodule BotArmyOutreach.Workers.SyncReportGenerator do
+  @moduledoc "Generates daily outreach analytics reports and syncs to Google Drive"
   require Logger
 
   alias BotArmyOutreach.Stores.ContactStore

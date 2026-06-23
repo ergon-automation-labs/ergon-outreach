@@ -1,4 +1,5 @@
 defmodule BotArmyOutreach.Workers.FollowUpScheduler do
+  @moduledoc "Scheduler that checks for contacts needing follow-up and creates GTD tasks"
   use GenServer
   require Logger
 

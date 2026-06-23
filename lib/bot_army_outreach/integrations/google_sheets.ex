@@ -1,4 +1,5 @@
 defmodule BotArmyOutreach.Integrations.GoogleSheets do
+  @moduledoc "Google Sheets integration for syncing contacts to the database"
   require Logger
   alias BotArmyOutreach.Stores.ContactStore
 

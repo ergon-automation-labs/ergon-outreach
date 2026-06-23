@@ -1,4 +1,5 @@
 defmodule BotArmyOutreach.Stores.ContactStore do
+  @moduledoc "Contact database operations and queries"
   alias BotArmyOutreach.Repo
   alias BotArmyOutreach.Schemas.Contact
   import Ecto.Query
