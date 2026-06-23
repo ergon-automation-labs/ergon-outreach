@@ -1,0 +1,22 @@
+# Build
+/_build/
+/.mix/
+/deps/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+
+# Erlang crash
+erl_crash.dump
+
+# Env
+.env
+.env.local
+
+# Cache
+.cache/
