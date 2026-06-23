@@ -8,7 +8,8 @@
           {Credo.Check.Warning.MissedMetadataKeyInLoggerConfig, []},
           {Credo.Check.Refactor.Nesting, []},
           {Credo.Check.Readability.AliasOrder, []},
-          {Credo.Check.Refactor.CyclomaticComplexity, []}
+          {Credo.Check.Refactor.CyclomaticComplexity, []},
+          {Credo.Check.Design.TagTODO, []}
         ]
       }
     }

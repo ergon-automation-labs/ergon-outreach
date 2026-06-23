@@ -119,7 +119,7 @@ defmodule BotArmyOutreach.Workers.SyncReportGenerator do
   defp days_ago(datetime) do
     now = DateTime.utc_now()
     diff = DateTime.diff(now, datetime, :second)
-    div(diff, 86400)
+    div(diff, 86_400)
   end
 
   defp calc_response_rate(stats, recent_replies) do
