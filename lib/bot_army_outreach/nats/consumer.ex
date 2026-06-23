@@ -16,11 +16,23 @@ defmodule BotArmyOutreach.NATS.Consumer do
   @reconnect_delay_ms 5000
   @version Mix.Project.config()[:version]
 
+  alias BotArmyOutreach.Stores.ContactStore
+
   # Register subjects with their metadata for runtime discovery
   @subjects [
-    # Add your subjects here:
-    # %{subject: "example.task.list", type: :request_reply, description: "List tasks"},
-    # %{subject: "example.event.>", type: :subscribe, description: "Example events"}
+    %{subject: "outreach.contact.create", type: :request_reply, description: "Create a contact"},
+    %{subject: "outreach.contact.update", type: :request_reply, description: "Update a contact"},
+    %{subject: "outreach.contact.list", type: :request_reply, description: "List contacts"},
+    %{
+      subject: "outreach.follow_up.schedule",
+      type: :request_reply,
+      description: "Schedule a follow-up"
+    },
+    %{
+      subject: "outreach.sheets.sync",
+      type: :request_reply,
+      description: "Pull contacts from Google Sheet"
+    }
   ]
 
   def start_link(opts) do
@@ -89,11 +101,12 @@ defmodule BotArmyOutreach.NATS.Consumer do
       # Handle request/reply patterns
       if msg.reply_to do
         case msg.topic do
-          # Add your request/reply handlers here
-          # "example.task.list" ->
-          #   handle_task_list(msg, state)
-          _ ->
-            Logger.debug("Unknown request/reply subject: #{msg.topic}")
+          "outreach.contact.create" -> handle_create_contact(msg, state)
+          "outreach.contact.update" -> handle_update_contact(msg, state)
+          "outreach.contact.list" -> handle_list_contacts(msg, state)
+          "outreach.follow_up.schedule" -> handle_schedule_follow_up(msg, state)
+          "outreach.sheets.sync" -> handle_sheets_sync(msg, state)
+          _ -> Logger.debug("Unknown request/reply subject: #{msg.topic}")
         end
       else
         # Handle pub/sub messages
@@ -135,18 +148,140 @@ defmodule BotArmyOutreach.NATS.Consumer do
   end
 
   # Request/reply handlers
-  # defp handle_task_list(msg, state) do
-  #   response =
-  #     case get_tasks() do
-  #       {:ok, tasks} ->
-  #         BotArmyRuntime.NATS.Reply.ok(%{"tasks" => tasks})
-  #
-  #       {:error, reason} ->
-  #         BotArmyRuntime.NATS.Reply.error(inspect(reason), :list_failed)
-  #     end
-  #
-  #   if state.conn do
-  #     Gnat.pub(state.conn, msg.reply_to, response)
-  #   end
-  # end
+  defp handle_create_contact(msg, state) do
+    response =
+      case Decoder.decode(msg.body) do
+        {:ok, decoded} ->
+          payload = decoded["payload"] || decoded
+
+          case ContactStore.create_contact(payload) do
+            {:ok, contact} ->
+              BotArmyRuntime.NATS.Reply.ok(%{"contact" => contact})
+
+            {:error, reason} ->
+              BotArmyRuntime.NATS.Reply.error(inspect(reason), :create_failed)
+          end
+
+        {:error, reason} ->
+          BotArmyRuntime.NATS.Reply.error(inspect(reason), :decode_failed)
+      end
+
+    if state.conn do
+      Gnat.pub(state.conn, msg.reply_to, response)
+    end
+  end
+
+  defp handle_update_contact(msg, state) do
+    response =
+      case Decoder.decode(msg.body) do
+        {:ok, decoded} ->
+          payload = decoded["payload"] || decoded
+
+          case ContactStore.get_contact(payload["email"]) do
+            nil ->
+              BotArmyRuntime.NATS.Reply.error("Contact not found", :not_found)
+
+            contact ->
+              case ContactStore.update_contact(contact, payload) do
+                {:ok, updated} ->
+                  BotArmyRuntime.NATS.Reply.ok(%{"contact" => updated})
+
+                {:error, reason} ->
+                  BotArmyRuntime.NATS.Reply.error(inspect(reason), :update_failed)
+              end
+          end
+
+        {:error, reason} ->
+          BotArmyRuntime.NATS.Reply.error(inspect(reason), :decode_failed)
+      end
+
+    if state.conn do
+      Gnat.pub(state.conn, msg.reply_to, response)
+    end
+  end
+
+  defp handle_list_contacts(msg, state) do
+    response =
+      case Decoder.decode(msg.body) do
+        {:ok, decoded} ->
+          payload = decoded["payload"] || decoded
+          filters = Map.get(payload, "filters", [])
+          contacts = ContactStore.list_contacts(filters)
+          BotArmyRuntime.NATS.Reply.ok(%{"contacts" => contacts})
+
+        {:error, reason} ->
+          BotArmyRuntime.NATS.Reply.error(inspect(reason), :decode_failed)
+      end
+
+    if state.conn do
+      Gnat.pub(state.conn, msg.reply_to, response)
+    end
+  end
+
+  defp handle_schedule_follow_up(msg, state) do
+    response =
+      case Decoder.decode(msg.body) do
+        {:ok, decoded} ->
+          payload = decoded["payload"] || decoded
+
+          case ContactStore.get_contact(payload["email"]) do
+            nil ->
+              BotArmyRuntime.NATS.Reply.error("Contact not found", :not_found)
+
+            contact ->
+              follow_up_date =
+                DateTime.add(
+                  DateTime.utc_now(),
+                  (payload["follow_up_in_days"] || 3) * 24 * 3600,
+                  :second
+                )
+
+              case ContactStore.update_contact(contact, %{
+                     next_follow_up: follow_up_date,
+                     stage: "follow_up_scheduled"
+                   }) do
+                {:ok, updated} ->
+                  BotArmyRuntime.NATS.Reply.ok(%{
+                    "scheduled" => true,
+                    "contact" => updated
+                  })
+
+                {:error, reason} ->
+                  BotArmyRuntime.NATS.Reply.error(inspect(reason), :schedule_failed)
+              end
+          end
+
+        {:error, reason} ->
+          BotArmyRuntime.NATS.Reply.error(inspect(reason), :decode_failed)
+      end
+
+    if state.conn do
+      Gnat.pub(state.conn, msg.reply_to, response)
+    end
+  end
 end
+
+  defp handle_sheets_sync(msg, state) do
+    response =
+      case Decoder.decode(msg.body) do
+        {:ok, decoded} ->
+          payload = decoded["payload"] || decoded
+          sheet_id = payload["sheet_id"]
+          range = payload["range"] || "Contacts!A2:G"
+
+          case BotArmyOutreach.Integrations.GoogleSheets.sync_from_sheet(sheet_id, range) do
+            {:ok, result} ->
+              BotArmyRuntime.NATS.Reply.ok(result)
+
+            {:error, reason} ->
+              BotArmyRuntime.NATS.Reply.error(inspect(reason), :sync_failed)
+          end
+
+        {:error, reason} ->
+          BotArmyRuntime.NATS.Reply.error(inspect(reason), :decode_failed)
+      end
+
+    if state.conn do
+      Gnat.pub(state.conn, msg.reply_to, response)
+    end
+  end

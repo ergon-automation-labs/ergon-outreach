@@ -52,7 +52,12 @@ defmodule BotArmyOutreach.Application do
       # Bot-specific workers and pollers go here (GenServers that do async work)
       # Examples: Scheduler, Poller, Watcher
       # Pattern: gated with if @env == :test to prevent long-running processes in test
-      children
+      [
+        {BotArmyOutreach.NATS.Consumer, []},
+        {BotArmyOutreach.Workers.FollowUpScheduler, []},
+        {BotArmyOutreach.Workers.SyncReportGenerator, []}
+        | children
+      ]
     end
   end
 end
