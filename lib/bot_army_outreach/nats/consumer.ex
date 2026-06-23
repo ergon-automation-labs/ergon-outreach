@@ -259,7 +259,6 @@ defmodule BotArmyOutreach.NATS.Consumer do
       Gnat.pub(state.conn, msg.reply_to, response)
     end
   end
-end
 
   defp handle_sheets_sync(msg, state) do
     response =
@@ -285,3 +284,4 @@ end
       Gnat.pub(state.conn, msg.reply_to, response)
     end
   end
+end
