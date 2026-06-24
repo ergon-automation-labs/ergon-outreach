@@ -12,6 +12,9 @@ defmodule BotArmyOutreach.MixProject do
         outreach_bot: [
           applications: [bot_army_outreach: :permanent]
         ]
+      ],
+      dialyzer: [
+        ignore_warnings: ".dialyzerignore"
       ]
     ]
   end

@@ -1,0 +1,3 @@
+lib/bot_army_outreach/application.ex:33:2 The check (is_atom(_@1=:test) <is> 'false') can never succeed
+lib/bot_army_outreach/application.ex:41:2 The check (is_atom(_@1=:test) <is> 'false') can never succeed
+lib/bot_army_outreach/application.ex:49:2 The check (is_atom(_@1=:test) <is> 'false') can never succeed
