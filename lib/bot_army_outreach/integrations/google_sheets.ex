@@ -116,7 +116,7 @@ defmodule BotArmyOutreach.Integrations.GoogleSheets do
   defp parse_date(date_str) when is_binary(date_str) do
     case DateTime.from_iso8601(date_str) do
       {:ok, datetime, _} -> datetime
-      :error -> try_parse_date_string(date_str)
+      {:error, _} -> try_parse_date_string(date_str)
     end
   end
 
