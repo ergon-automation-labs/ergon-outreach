@@ -7,7 +7,7 @@ if config_env() == :prod do
         "bot_army",
     password:
       System.get_env("BOT_ARMY_OUTREACH_DATABASE_PASSWORD") || System.get_env("DATABASE_PASSWORD") ||
-        "bot_army_password",
+        "postgres",
     database:
       System.get_env("BOT_ARMY_OUTREACH_DATABASE_NAME") || System.get_env("DATABASE_NAME") ||
         "ergon_outreach",
