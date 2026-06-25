@@ -61,9 +61,7 @@ defmodule BotArmyOutreach.NATS.Consumer do
         Logger.info("Connected to NATS, subscribing to topics")
 
         subscriptions =
-          [
-            # Add your subjects here
-          ]
+          @subjects
           |> Enum.map(fn subject ->
             case Gnat.sub(conn, self(), subject) do
               {:ok, sub} ->
