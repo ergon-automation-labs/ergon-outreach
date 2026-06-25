@@ -19,8 +19,6 @@ if config_env() == :prod do
         System.get_env("BOT_ARMY_OUTREACH_DATABASE_PORT") || System.get_env("DATABASE_PORT") ||
           "5432"
       ),
-    ssl:
-      System.get_env("BOT_ARMY_OUTREACH_DATABASE_SSL") || System.get_env("DATABASE_SSL") ||
-        "false" |> String.to_atom(),
+    ssl: false,
     pool_size: String.to_integer(System.get_env("BOT_POOL_SIZE", "10"))
 end
