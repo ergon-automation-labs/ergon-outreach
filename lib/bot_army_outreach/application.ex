@@ -54,8 +54,7 @@ defmodule BotArmyOutreach.Application do
       # Pattern: gated with if @env == :test to prevent long-running processes in test
       [
         {BotArmyOutreach.NATS.Consumer, []},
-        {BotArmyOutreach.Workers.FollowUpScheduler, []},
-        {BotArmyOutreach.Workers.SyncReportGenerator, []}
+        {BotArmyOutreach.Workers.FollowUpScheduler, []}
         | children
       ]
     end
